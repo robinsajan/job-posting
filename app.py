@@ -135,7 +135,7 @@ def index():
             text = request.form.get("item")
             if text:
                 text = call_llm(text)
-                items.append(text)
+                items+=text
         elif action == "generate":
             return generate_pdf()
     return render_template("index.html", items=items)
