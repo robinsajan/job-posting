@@ -3,5 +3,5 @@ gunicorn
 reportlab
 python-dotenv
 together
-PIL
+Pillow
 google-generativeai
