@@ -16,8 +16,10 @@ app = Flask(__name__)
 items = []
 
 API_KEY=os.getenv("API_KEY")
-
 client = Together(api_key=API_KEY)
+
+GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=GOOGLE_API_KEY)
 
 def llm(query):
   response = client.chat.completions.create(
@@ -26,6 +28,52 @@ def llm(query):
   )
   return response.choices[0].message.content
 
+def vllm(query,image):
+    model=genai.GenerativeModel('gemini-2.0-flash')
+    response=model.generate_content([query,image])
+    return response.text
+  
+def call_vllm(image):
+    prompt="""You are an advanced AI system designed to extract structured job listing information from images. Analyze the content of the provided image, including all visible text, and return only a Python list where each item is a dictionary representing a job role.
+
+Do not infer company names from emails. Only use explicitly mentioned names (in headers or paragraphs). Extract all visible and clearly stated job-related data fields.
+strictly return the list only nothing else
+Expected Output Format (Python only):
+
+[
+    {
+        "job_title": "",
+        "company": "",  # Only if explicitly written outside of email domains
+        "location": "",
+        "salary": "",
+        "summary": "",  # 2-sentence summary using job description, if any
+        "employment_type": "",
+        "requirements": [],
+        "point_of_contact": [],
+        "benefits": [],
+        "how_to_apply": "",
+        "posting_date": "",
+        "deadline": ""
+    }
+]
+Extraction Rules:
+
+Extract every job title found in the image individually, even if they’re listed in bullet points or numbered lists.
+
+Capture multiple contacts, emails, or phone numbers if provided.
+
+Use bullet point text (if any) to populate requirements or benefits accurately.
+
+Include location (e.g., “Mumbai”) if it applies to all positions.
+
+Leave any unavailable field as an empty string "".
+"""
+    response=vllm(prompt,image)
+    response=response.replace("```python","").replace("```","")
+    response=eval(response)
+
+    return response
+  
 def call_llm(input):
     prompt=f"""You are an expert-level job information extractor. From the unstructured text provided, extract and return a Python list where each item is a dictionary containing job-related fields.
 
@@ -142,14 +190,22 @@ def generate_pdf():
 def index():
     global items
     if request.method == "POST":
-        action = request.form.get("action")
-        if action == "add":
-            text = request.form.get("item")
+        if 'add' in request.form:
+            text = request.form.get("item", "").strip()
+            image = request.files.get("image")
+
+            if image and image.filename != "":
+                image=PIL.Image.open(image.stream)
+                text=call_vllm(image)
+                items+=text
+
             if text:
                 text = call_llm(text)
                 items+=text
-        elif action == "generate":
+
+        elif 'generate' in request.form:
             return generate_pdf()
+
     return render_template("index.html", items=items)
 
 
