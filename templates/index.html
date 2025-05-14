@@ -2,121 +2,61 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Text List to PDF</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Entry Form</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f0f4f8;
-      color: #333;
-      padding: 2em;
+      background-color: #f8f9fa;
+      padding-top: 60px;
+    }
+    .container {
       max-width: 600px;
-      margin: auto;
     }
-
-    h1 {
-      text-align: center;
-      color: #2c3e50;
-      font-size: 2rem;
+    .card {
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
-
-    form {
+    .btn-group {
       display: flex;
-      flex-direction: column;
-      gap: 1em;
-      margin-top: 2em;
-      align-items: center;
-    }
-
-    input[type="text"] {
-      padding: 0.6em 1em;
-      width: 100%;
-      font-size: 1.1rem;
-      border: 2px solid #ccc;
-      border-radius: 10px;
-    }
-
-    .button-group {
-      display: flex;
-      flex-direction: row;
-      gap: 1em;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    button {
-      background-color: #3498db;
-      color: white;
-      border: none;
-      padding: 0.6em 1.4em;
-      border-radius: 30px;
-      cursor: pointer;
-      font-size: 1.1rem;
-      transition: background 0.3s ease;
-    }
-
-    button:hover {
-      background-color: #2980b9;
-    }
-
-    ul {
-      list-style: none;
-      margin-top: 2em;
-      padding-left: 0;
-    }
-
-    li {
-      background-color: #ffffff;
-      padding: 0.75em 1em;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-      margin-bottom: 0.5em;
-      font-size: 1.1rem;
-    }
-
-    /* 👇 Responsive tweaks for phones */
-    @media (max-width: 480px) {
-      body {
-        padding: 1em;
-        font-size: 1.2rem;
-      }
-
-      h1 {
-        font-size: 1.8rem;
-      }
-
-      input[type="text"] {
-        font-size: 1.2rem;
-        padding: 0.8em;
-      }
-
-      button {
-        font-size: 1.2rem;
-        padding: 0.7em 1.6em;
-      }
-
-      li {
-        font-size: 1.2rem;
-      }
+      justify-content: space-between;
     }
   </style>
 </head>
 <body>
-  <h1>📝 Your Text List</h1>
+  <div class="container">
+    <h2 class="mb-4 text-center">Add Job Description</h2>
+    <div class="card p-4">
+      <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+          <label for="item" class="form-label">Enter Job Text</label>
+          <textarea name="item" class="form-control" rows="4" placeholder="Type or paste job description..."></textarea>
+        </div>
 
-  <form method="POST">
-  <input type="text" name="item" placeholder="Enter something..." >
+        <div class="text-center mb-3">— OR —</div>
 
-  <div class="button-group">
-    <button type="submit" name="action" value="add">➕ Add</button>
-    <button type="submit" name="action" value="generate">📄 Generate PDF</button>
+        <div class="mb-3">
+          <label for="image" class="form-label">Upload an Image</label>
+          <input type="file" name="image" class="form-control" accept="image/*">
+        </div>
+
+        <div class="btn-group">
+          <button type="submit" name="add" class="btn btn-primary w-50 me-2">➕ Add</button>
+          <button type="submit" name="generate" class="btn btn-success w-50">📄 Generate PDF</button>
+        </div>
+      </form>
+    </div>
+
+    {% if items %}
+    <div class="mt-4">
+      <h5>Added Items:</h5>
+      <ul class="list-group">
+        {% for item in items %}
+          <li class="list-group-item">{{ item.job_title or item }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
   </div>
-</form>
 
-  <ul>
-    {% for item in items %}
-      <li>{{ item }}</li>
-    {% endfor %}
-  </ul>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
