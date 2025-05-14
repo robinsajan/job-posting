@@ -7,6 +7,8 @@ from reportlab.lib import colors
 from together import Together
 import os
 from dotenv import load_dotenv
+import PIL
+import google.generativeai as genai
 
 load_dotenv() 
 
