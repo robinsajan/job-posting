@@ -36,9 +36,6 @@ Only extract fields explicitly mentioned in the text.
 
 Required Output Format (Python only):
 
-python
-Copy
-Edit
 [
     {{
         "job_title": "",
@@ -69,7 +66,9 @@ Both names and emails should be included in "point_of_contact" if available.
 
 Use this unstructured text:
 {input}"""
-    return llm(prompt)
+    output=llm(prompt)
+    output=eval(output)
+    return output
 
 def generate_pdf():
     print("called")
