@@ -71,37 +71,43 @@ Use this unstructured text:
     return output
 
 def generate_pdf():
-    print("called")
     global items
+    print("called")
 
+    # Use BytesIO for in-memory PDF
     pdf_buffer = io.BytesIO()
-    doc = SimpleDocTemplate("jobs.pdf", pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    
+    # Build doc using in-memory buffer
+    doc = SimpleDocTemplate(
+        pdf_buffer,
+        pagesize=A4,
+        rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30
+    )
 
-    # Sample job data
     jobs = items
 
     styles = getSampleStyleSheet()
     normal_style = ParagraphStyle('normal', fontName='Helvetica', fontSize=9, leading=11)
     bold_style = ParagraphStyle(
         name='BoldStyle',
-        fontName='Helvetica-Bold',  # <-- This makes the text bold
+        fontName='Helvetica-Bold',
         fontSize=10,
         leading=12
     )
 
     def job_to_table(job):
         data = []
-        if job['job_title']: data.append(['Job Title', Paragraph(job['job_title'], bold_style)])
-        if job['company']: data.append(['Company', Paragraph(job['company'], normal_style)])
-        if job['location']: data.append(['Location', Paragraph(job['location'], normal_style)])
-        if job['salary']: data.append(['Salary', Paragraph(job['salary'], normal_style)])
-        if job['summary']: data.append(['Summary', Paragraph(job['summary'], normal_style)])
-        if job['employment_type']: data.append(['Employment Type', Paragraph(job['employment_type'], normal_style)])
-        if job['requirements']: data.append(['Requirements', Paragraph('; '.join(job['requirements']), normal_style)])
-        if job['how_to_apply']: data.append(['How to Apply', Paragraph(job['how_to_apply'], normal_style)])
-        if job['point_of_contact']: data.append(['Contact', Paragraph(job['point_of_contact'], normal_style)])
+        if job.get('job_title'): data.append(['Job Title', Paragraph(job['job_title'], bold_style)])
+        if job.get('company'): data.append(['Company', Paragraph(job['company'], normal_style)])
+        if job.get('location'): data.append(['Location', Paragraph(job['location'], normal_style)])
+        if job.get('salary'): data.append(['Salary', Paragraph(job['salary'], normal_style)])
+        if job.get('summary'): data.append(['Summary', Paragraph(job['summary'], normal_style)])
+        if job.get('employment_type'): data.append(['Employment Type', Paragraph(job['employment_type'], normal_style)])
+        if job.get('requirements'): data.append(['Requirements', Paragraph('; '.join(job['requirements']), normal_style)])
+        if job.get('how_to_apply'): data.append(['How to Apply', Paragraph(job['how_to_apply'], normal_style)])
+        if job.get('point_of_contact'): data.append(['Contact', Paragraph(job['point_of_contact'], normal_style)])
 
-        table = Table(data, colWidths=[80, 400])  # Adjusted column width to fit within page
+        table = Table(data, colWidths=[80, 400])
         table.setStyle(TableStyle([
             ('BOX', (0,0), (-1,-1), 0.75, colors.black),
             ('INNERGRID', (0,0), (-1,-1), 0.25, colors.grey),
@@ -115,17 +121,23 @@ def generate_pdf():
         ]))
         return table
 
-    # Build the PDF
     elements = []
     for job in jobs:
         elements.append(job_to_table(job))
         elements.append(Spacer(1, 12))
 
-    doc.build(elements)
-    pdf_buffer.seek(0)
-    items=[]
-    return send_file(pdf_buffer, as_attachment=True, download_name="jobs.pdf", mimetype="application/pdf")
+    doc.build(elements)  # Write to pdf_buffer
+    pdf_buffer.seek(0)   # Rewind the buffer
 
+    # Optionally clear jobs
+    items = []
+
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        download_name="jobs.pdf",
+        mimetype="application/pdf"
+    )
 @app.route("/", methods=["GET", "POST"])
 def index():
     global items
