@@ -15,17 +15,16 @@ app = Flask(__name__)
 # Store items in a simple in-memory list (will reset on app restart)
 items = []
 
-# API_KEY=os.getenv("API_KEY")
+API_KEY=os.getenv("API_KEY")
 
-# client = Together(api_key=API_KEY)
+client = Together(api_key=API_KEY)
 
 def llm(query):
-    return query
-#   response = client.chat.completions.create(
-#       model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
-#       messages=[{"role": "user", "content": query}],
-#   )
-#   return response.choices[0].message.content
+  response = client.chat.completions.create(
+      model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+      messages=[{"role": "user", "content": query}],
+  )
+  return response.choices[0].message.content
 
 def call_llm(input):
     prompt=f"""You are an expert-level job information extractor. From the unstructured text provided, extract and return a Python list where each item is a dictionary containing job-related fields.
