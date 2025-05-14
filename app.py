@@ -45,7 +45,7 @@ Required Output Format (Python only):
         "summary": "",  # A 2-sentence summary based on any text available
         "employment_type": "",
         "requirements": [],
-        "point_of_contact": "",
+        "point_of_contact": [],
         "benefits": [],
         "how_to_apply": "",
         "posting_date": "",
