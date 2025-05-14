@@ -1,29 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Flask on Render</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 40px;
-            background: #f0f0f0;
-            text-align: center;
-        }
-        .card {
-            background: white;
-            padding: 2em;
-            margin: auto;
-            max-width: 400px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
-            border-radius: 10px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Text List to PDF</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0f4f8;
+      color: #333;
+      padding: 2em;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      font-size: 2rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+      margin-top: 2em;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      padding: 0.6em 1em;
+      width: 100%;
+      font-size: 1.1rem;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: row;
+      gap: 1em;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 0.6em 1.4em;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    ul {
+      list-style: none;
+      margin-top: 2em;
+      padding-left: 0;
+    }
+
+    li {
+      background-color: #ffffff;
+      padding: 0.75em 1em;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      margin-bottom: 0.5em;
+      font-size: 1.1rem;
+    }
+
+    /* 👇 Responsive tweaks for phones */
+    @media (max-width: 480px) {
+      body {
+        padding: 1em;
+        font-size: 1.2rem;
+      }
+
+      h1 {
+        font-size: 1.8rem;
+      }
+
+      input[type="text"] {
+        font-size: 1.2rem;
+        padding: 0.8em;
+      }
+
+      button {
+        font-size: 1.2rem;
+        padding: 0.7em 1.6em;
+      }
+
+      li {
+        font-size: 1.2rem;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="card">
-        <h1>🚀 Hello from Flask!</h1>
-        <p>This app is running on <strong>Render</strong> for free.</p>
+  <h1>📝 Your Text List</h1>
+
+  <form method="POST">
+    <input type="text" name="item" placeholder="Enter something..." required>
+
+    <div class="button-group">
+      <button type="submit" name="add">➕ Add</button>
+      <button type="submit" name="generate">📄 Generate PDF</button>
     </div>
+  </form>
+
+  <ul>
+    {% for item in items %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
 </body>
 </html>
