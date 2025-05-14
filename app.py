@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, send_file
-from io import BytesIO
+import io
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -15,16 +15,17 @@ app = Flask(__name__)
 # Store items in a simple in-memory list (will reset on app restart)
 items = []
 
-API_KEY=os.getenv("API_KEY")
+# API_KEY=os.getenv("API_KEY")
 
-client = Together(api_key=API_KEY)
+# client = Together(api_key=API_KEY)
 
 def llm(query):
-  response = client.chat.completions.create(
-      model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
-      messages=[{"role": "user", "content": query}],
-  )
-  return response.choices[0].message.content
+    return query
+#   response = client.chat.completions.create(
+#       model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+#       messages=[{"role": "user", "content": query}],
+#   )
+#   return response.choices[0].message.content
 
 def call_llm(input):
     prompt=f"""You are an expert-level job information extractor. From the unstructured text provided, extract and return a Python list where each item is a dictionary containing job-related fields.
@@ -71,20 +72,10 @@ Use this unstructured text:
 {input}"""
     return llm(prompt)
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    global items
-    if request.method == "POST":
-        if 'add' in request.form:
-            text = request.form.get("item")
-            if text:
-                text=call_llm(text)
-                items.append(text)
-        elif 'generate' in request.form:
-            return generate_pdf()
-    return render_template("index.html", items=items)
-
 def generate_pdf():
+    print("called")
+
+    pdf_buffer = io.BytesIO()
     doc = SimpleDocTemplate("jobs.pdf", pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
 
     # Sample job data
@@ -132,6 +123,25 @@ def generate_pdf():
         elements.append(Spacer(1, 12))
 
     doc.build(elements)
+    pdf_buffer.seek(0)
+    items=[]
+    return send_file(pdf_buffer, as_attachment=True, download_name="jobs.pdf", mimetype="application/pdf")
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    global items
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "add":
+            text = request.form.get("item")
+            if text:
+                text = call_llm(text)
+                items.append(text)
+        elif action == "generate":
+            return generate_pdf()
+    return render_template("index.html", items=items)
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
