@@ -1,2 +1,5 @@
 Flask
 gunicorn
+reportlab
+python-dotenv
+together
