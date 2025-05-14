@@ -73,6 +73,7 @@ Use this unstructured text:
 
 def generate_pdf():
     print("called")
+    global items
 
     pdf_buffer = io.BytesIO()
     doc = SimpleDocTemplate("jobs.pdf", pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
