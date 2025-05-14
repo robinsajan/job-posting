@@ -204,7 +204,10 @@ def index():
             if text:
                 text = call_llm(text)
                 items+=text
-
+        elif 'remove' in request.form:
+          if items:
+              items=[]
+            
         elif 'generate' in request.form:
             return generate_pdf()
 
