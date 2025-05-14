@@ -105,7 +105,7 @@ def generate_pdf():
         if job.get('employment_type'): data.append(['Employment Type', Paragraph(job['employment_type'], normal_style)])
         if job.get('requirements'): data.append(['Requirements', Paragraph('; '.join(job['requirements']), normal_style)])
         if job.get('how_to_apply'): data.append(['How to Apply', Paragraph(job['how_to_apply'], normal_style)])
-        if job.get('point_of_contact'): data.append(['Contact', Paragraph(job['point_of_contact'], normal_style)])
+        if job['point_of_contact']: data.append(['Contact', Paragraph('; '.join(job['point_of_contact']), normal_style)])
 
         table = Table(data, colWidths=[80, 400])
         table.setStyle(TableStyle([
