@@ -36,19 +36,30 @@ def vllm(query,image):
     return response.text
   
 def call_vllm(image):
-    prompt="""You are an advanced AI system designed to extract structured job listing information from images. Analyze the content of the provided image, including all visible text, and return only a Python list where each item is a dictionary representing a job role.
+    prompt="""You are a specialized job information extraction assistant trained to extract structured job data from images. Your task is to read the full content of the image (including all visible text) and return a deduplicated Python list of job roles.
 
-Do not infer company names from emails. Only use explicitly mentioned names (in headers or paragraphs). Extract all visible and clearly stated job-related data fields.
-strictly return the list only nothing else
-Expected Output Format (Python only):
+Important Instructions:
 
+✅ Return each job only once, even if it appears multiple times in the image (e.g., in both paragraph and bullet format).
+
+❌ Do not repeat job entries under any condition.
+
+✅ Do not infer company names from email addresses — use only explicitly stated company names.
+
+✅ Do not include any explanation, markdown, or formatting — return only the Python list.
+
+Output Format (Python list only):
+
+python
+Copy
+Edit
 [
     {
         "job_title": "",
-        "company": "",  # Only if explicitly written outside of email domains
+        "company": "",  # Only if clearly mentioned outside emails
         "location": "",
         "salary": "",
-        "summary": "",  # 2-sentence summary using job description, if any
+        "summary": "",  # Condense any job description into 2 sentences
         "employment_type": "",
         "requirements": [],
         "point_of_contact": [],
@@ -58,17 +69,17 @@ Expected Output Format (Python only):
         "deadline": ""
     }
 ]
-Extraction Rules:
+Instructions for Field Handling:
 
-Extract every job title found in the image individually, even if they’re listed in bullet points or numbered lists.
+Parse all visible text from the image.
 
-Capture multiple contacts, emails, or phone numbers if provided.
+Treat numbered or bulleted job lists as separate entries, but check for duplicate descriptions/titles and return only unique jobs.
 
-Use bullet point text (if any) to populate requirements or benefits accurately.
+Use bullet points or surrounding text to populate requirements, benefits, or summary where possible.
 
-Include location (e.g., “Mumbai”) if it applies to all positions.
+Combine duplicate details (e.g., two lines describing the same job) into a single entry.
 
-Leave any unavailable field as an empty string "".
+Leave missing values as empty strings ""
 """
     response=vllm(prompt,image)
     response=response.replace("```python","").replace("```","")
