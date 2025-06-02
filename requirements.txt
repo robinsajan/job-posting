@@ -1,7 +1,6 @@
 Flask
 gunicorn
-reportlab
+pandas
 python-dotenv
-together
 Pillow
 google-generativeai
