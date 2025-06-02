@@ -1,14 +1,11 @@
 from flask import Flask, render_template, request, redirect, send_file
 import io
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
-from together import Together
+import pandas as pd
 import os
 from dotenv import load_dotenv
 import PIL
 import google.generativeai as genai
+from datetime import datetime
 
 load_dotenv() 
 
@@ -18,17 +15,15 @@ app = Flask(__name__)
 items = []
 
 API_KEY=os.getenv("API_KEY")
-client = Together(api_key=API_KEY)
 
 GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
 
 def llm(query):
-  response = client.chat.completions.create(
-      model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
-      messages=[{"role": "user", "content": query}],
-  )
-  return response.choices[0].message.content
+    model = genai.GenerativeModel("gemini-2.0-flash")
+    response = model.generate_content(query)
+    return response.text
+
 
 def vllm(query,image):
     model=genai.GenerativeModel('gemini-2.0-flash')
@@ -36,51 +31,92 @@ def vllm(query,image):
     return response.text
   
 def call_vllm(image):
-    prompt="""You are a specialized job information extraction assistant trained to extract structured job data from images. Your task is to read the full content of the image (including all visible text) and return a deduplicated Python list of job roles.
+    prompt="""
 
-Important Instructions:
+You are a specialized job information extraction assistant trained to extract structured job data from images. Your task is to read all visible text in the image and return a deduplicated Python list of job roles.
 
-✅ Return each job only once, even if it appears multiple times in the image (e.g., in both paragraph and bullet format).
+## Core Requirements
 
-❌ Do not repeat job entries under any condition.
+- **Read ALL visible text** - scan the entire image thoroughly
+- **Return each job only once** - eliminate duplicates across different formats
+- **Output raw Python code only** - no explanations, markdown, or commentary
+- **Extract only explicit information** - never infer or assume missing details
 
-✅ Do not infer company names from email addresses — use only explicitly stated company names.
+## Critical Deduplication Rules
 
-✅ Do not include any explanation, markdown, or formatting — return only the Python list.
+1. **Same job, different formats** - If a job appears in both paragraph and bullet format, return only one entry
+2. **Similar titles, different companies** - These are separate jobs, include both
+3. **Identical descriptions** - Merge into single entry with combined details
+4. **Multiple locations for same role** - Combine locations or create separate entries based on context
 
-Output Format (Python list only):
+## Required Output Format
 
-python
-Copy
-Edit
+```python
 [
     {
         "job_title": "",
-        "company": "",  # Only if clearly mentioned outside emails
+        "company": "",  # Only if mentioned outside the email
         "location": "",
         "salary": "",
-        "summary": "",  # Condense any job description into 2 sentences
-        "employment_type": "",
         "requirements": [],
-        "point_of_contact": [],
-        "benefits": [],
-        "how_to_apply": "",
-        "posting_date": "",
-        "deadline": ""
+        "point_of_contact": []
     }
 ]
-Instructions for Field Handling:
+```
 
-Parse all visible text from the image.
+## Field Extraction Guidelines
 
-Treat numbered or bulleted job lists as separate entries, but check for duplicate descriptions/titles and return only unique jobs.
+### job_title
+- Extract exact title as displayed
+- Include seniority/level indicators (Senior, Junior, Lead, Manager)
+- Preserve technical specifications (Full Stack, Frontend, Backend)
 
-Use bullet points or surrounding text to populate requirements, benefits, or summary where possible.
+### company
+- **ONLY extract if explicitly mentioned outside email addresses**
+- Do not derive company names from email domains or signatures
+- Include if mentioned in headers, footers, or job descriptions
 
-Combine duplicate details (e.g., two lines describing the same job) into a single entry.
+### location
+- Extract all location formats: city, state, country, "Remote", "Hybrid"
+- Include multiple locations if specified for single role
+- Preserve location qualifiers ("Flexible", "Occasional travel")
 
-Leave missing values as empty strings ""
-"""
+### salary
+- Include full compensation details as stated
+- Preserve currency symbols, ranges, time periods
+- Include equity, bonuses, or other compensation if mentioned
+
+### requirements
+- Return as list of strings
+- Include technical skills, experience levels, education requirements
+- Extract from bullet points, paragraphs, or qualification sections
+- Separate each distinct requirement
+
+## Image Processing Instructions
+
+1. **Scan entire image** - Read all visible text from top to bottom, left to right
+2. **Parse all text formats** - Headers, paragraphs, bullet points, tables, captions
+3. **Identify job sections** - Look for job listings, descriptions, requirements
+4. **Extract contact information** - Names, emails, phone numbers anywhere in image
+5. **Check for duplicates** - Same job in different formats should be merged
+
+## Deduplication Process
+
+Before returning results:
+- Compare job titles and descriptions for duplicates
+- Merge identical jobs from different sections
+- Combine scattered information for same role
+- Ensure each unique job appears only once
+- Verify all visible text has been processed
+
+## Quality Assurance
+
+- Each job has its own dictionary entry
+- No company names inferred from email domains
+- All explicitly visible information captured
+- Lists used for multi-value fields (requirements, contacts)
+- Empty strings ("") for missing information
+- Valid Python list syntax"""
     response=vllm(prompt,image)
     response=response.replace("```python","").replace("```","")
     response=eval(response)
@@ -88,117 +124,117 @@ Leave missing values as empty strings ""
     return response
   
 def call_llm(input):
-    prompt=f"""You are an expert-level job information extractor. From the unstructured text provided, extract and return a Python list where each item is a dictionary containing job-related fields.
+    prompt="""You are an expert-level job information extractor. Extract job-related information from unstructured text and return it as a Python list of dictionaries.
+Core Instructions
 
-Only extract fields explicitly mentioned in the text.
-✅ Do not infer company names from email domains.
-✅ Do not output any commentary, explanation, or markdown.
-✅ Do not guess values — leave them as empty string "" if not found.
+Extract only explicitly mentioned information - never infer or guess
+One dictionary per distinct job role - separate even if listed together
+Use empty strings ("") for missing fields - no null values or assumptions
+Return raw Python code only - no markdown, explanations, or commentary
 
-Required Output Format (Python only):
-
-[
-    {{
+Required Output Format
+python[
+    {
         "job_title": "",
-        "company": "",  # Only if mentioned outside the email
+        "company": "",
         "location": "",
         "salary": "",
-        "summary": "",  # A 2-sentence summary based on any text available
-        "employment_type": "",
         "requirements": [],
-        "point_of_contact": [],
-        "benefits": [],
-        "how_to_apply": "",
-        "posting_date": "",
-        "deadline": ""
-    }}
+        "point_of_contact": []
+    }
 ]
-Populate as many fields as possible for each role. For fields like "requirements", "benefits", and "point_of_contact", return lists or strings as appropriate. Use clear logic to form a 2-sentence summary if any descriptive text is provided.
+Field Extraction Rules
+job_title
 
-Special Instructions:
+Extract exact title as stated
+If multiple titles listed separately, create separate entries
+Include seniority levels if mentioned (Senior, Junior, Lead, etc.)
 
-Extract company name only if clearly stated outside the email domain.
+company
 
-Group roles individually even if listed in a single line (e.g., items in a numbered list).
+Only extract if company name is explicitly stated in the text
+DO NOT derive company names from email domains
+Must be mentioned outside of email addresses
 
-The location “Mumbai” should be included if mentioned as common to all roles.
+location
 
-Both names and emails should be included in "point_of_contact" if available.
+Extract specific locations (city, state, country)
+Include "Remote" if mentioned
+If one location applies to multiple roles, include it for each
 
-Use this unstructured text:
-{input}"""
+salary
+
+Include full salary information as stated
+Preserve currency, ranges, and time periods (hourly/monthly/yearly)
+Include benefits if mentioned with salary
+
+requirements
+
+Return as list of strings
+Include technical skills, experience levels, education
+Separate each distinct requirement
+Include both required and preferred qualifications
+
+point_of_contact
+
+Include names, email addresses, phone numbers
+Each contact detail as separate list item
+Preserve formatting of contact information
+
+Special Cases
+
+Multiple roles in one listing: Create separate dictionary entries
+Shared information: Repeat common details (like location) for each role
+Incomplete postings: Fill available fields, leave others empty
+Contact information: Always include if present, regardless of format
+
+Quality Checks
+Before returning results, verify:
+
+ Each job has its own dictionary
+ No inferred company names from email domains
+ All explicitly mentioned information captured
+ Lists used for multi-value fields
+ No commentary or explanations included
+ Valid Python list syntax
+
+Use this unstructured input:
+"""
+    prompt=prompt+input
     output=llm(prompt)
+    output=output.replace("```python", "").replace("```", "").strip()
     output=eval(output)
     return output
 
-def generate_pdf():
+def generate_excel():
     global items
     print("called")
+    df = pd.DataFrame([
+        {
+            "Sr. No.": idx + 1,
+            "Job Title": job.get("job_title", ""),
+            "Company Name": job.get("company", ""),
+            "Location(s)": job.get("location", ""),
+            "CV to be sent at":"; ".join(job.get("point_of_contact", [])),
+            "Requirements": "; ".join(job.get("requirements", []))
+            
+        }
+        for idx, job in enumerate(items)
+    ])
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_path = "jobs"+str(timestamp)+".csv"
+    df.to_csv(file_path, index=False)
 
-    # Use BytesIO for in-memory PDF
-    pdf_buffer = io.BytesIO()
-    
-    # Build doc using in-memory buffer
-    doc = SimpleDocTemplate(
-        pdf_buffer,
-        pagesize=A4,
-        rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30
-    )
-
-    jobs = items
-
-    styles = getSampleStyleSheet()
-    normal_style = ParagraphStyle('normal', fontName='Helvetica', fontSize=9, leading=11)
-    bold_style = ParagraphStyle(
-        name='BoldStyle',
-        fontName='Helvetica-Bold',
-        fontSize=10,
-        leading=12
-    )
-
-    def job_to_table(job):
-        data = []
-        if job.get('job_title'): data.append(['Job Title', Paragraph(job['job_title'], bold_style)])
-        if job.get('company'): data.append(['Company', Paragraph(job['company'], normal_style)])
-        if job.get('location'): data.append(['Location', Paragraph(job['location'], normal_style)])
-        if job.get('salary'): data.append(['Salary', Paragraph(job['salary'], normal_style)])
-        if job.get('summary'): data.append(['Summary', Paragraph(job['summary'], normal_style)])
-        if job.get('employment_type'): data.append(['Employment Type', Paragraph(job['employment_type'], normal_style)])
-        if job.get('requirements'): data.append(['Requirements', Paragraph('; '.join(job['requirements']), normal_style)])
-        if job.get('how_to_apply'): data.append(['How to Apply', Paragraph(job['how_to_apply'], normal_style)])
-        if job['point_of_contact']: data.append(['Contact', Paragraph('; '.join(job['point_of_contact']), normal_style)])
-
-        table = Table(data, colWidths=[80, 400])
-        table.setStyle(TableStyle([
-            ('BOX', (0,0), (-1,-1), 0.75, colors.black),
-            ('INNERGRID', (0,0), (-1,-1), 0.25, colors.grey),
-            ('BACKGROUND', (0,0), (0,-1), colors.lightgrey),
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('FONTSIZE', (0,0), (-1,-1), 9),
-            ('LEFTPADDING', (0,0), (-1,-1), 4),
-            ('RIGHTPADDING', (0,0), (-1,-1), 4),
-            ('TOPPADDING', (0,0), (-1,-1), 2),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ]))
-        return table
-
-    elements = []
-    for job in jobs:
-        elements.append(job_to_table(job))
-        elements.append(Spacer(1, 12))
-
-    doc.build(elements)  # Write to pdf_buffer
-    pdf_buffer.seek(0)   # Rewind the buffer
-
-    # Optionally clear jobs
-    items = []
-
+    # Send the file to client
     return send_file(
-        pdf_buffer,
+        file_path,
+        mimetype='text/csv',
         as_attachment=True,
-        download_name="jobs.pdf",
-        mimetype="application/pdf"
+        download_name=file_path
     )
+    
+
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     global items
@@ -220,7 +256,7 @@ def index():
               items=[]
             
         elif 'generate' in request.form:
-            return generate_pdf()
+            return generate_excel()
 
     return render_template("index.html", items=items)
 
